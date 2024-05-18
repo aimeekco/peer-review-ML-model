@@ -1,0 +1,1 @@
+"This paper proposed a new optimization framework for semi-supervised learning based on derived inversion scheme for deep neural networks.[[INT-NEU], [null], [SMY], [GEN]] The numerical experiments show a significant improvement in accuracy of the approach."[[EXP-POS,MET-POS], [EMP-POS], [APC], [MAJ]]

@@ -1,0 +1,1 @@
+"This paper extends the framework of neural networks for finite-dimension to the case of infinite-dimension setting, called deep function machines.[[INT-NEU], [null], [SMY], [GEN]] This theory seems to be interesting and might have further potential in applications."[[MET-POS], [IMP-POS], [APC], [MAJ]]

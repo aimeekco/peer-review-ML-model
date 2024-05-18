@@ -1,0 +1,1 @@
+"In the centre loss, the centre is learned.[[RES-NEU], [EMP-NEU], [DIS], [GEN]] Now it's calculated as the average of the last layer's features[[MET-NEU], [null], [SMY], [GEN]]\nTo enable training with SGD, the authors calculate the centre within a mini batch"[[MET-NEU], [null], [SMY], [GEN]]
