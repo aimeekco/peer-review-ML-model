@@ -2,13 +2,13 @@ import os
 import nltk
 import re
 import numpy as np
+import pickle
+import pandas as pd
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
 from nltk.tokenize import word_tokenize, sent_tokenize
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import wordnet
-import pickle
-import pandas as pd
 
 # download NLTK data and initialize tools
 nltk.download('averaged_perceptron_tagger')
@@ -31,176 +31,192 @@ print(f"FileID Path: {fileid_path}")
 print(f"Tags Path: {tags_path}")
 
 # load data from pickle files and print their contents
-def load_and_print_pickle(file_path, label):
-    if not os.path.exists(file_path):
-        print(f"{label} file does not exist: {file_path}")
-        return []
+# def load_and_print_pickle(file_path, label):
+#     if not os.path.exists(file_path):
+#         print(f"{label} file does not exist: {file_path}")
+#         return []
     
-    with open(file_path, "rb") as pickle_in:
-        data = pickle.load(pickle_in)
-        print(f"Loaded {len(data)} items from {label}")
-        if len(data) > 0:
-            print(f"First item in {label}: {data[0]}")
-        return data
+#     with open(file_path, "rb") as pickle_in:
+#         data = pickle.load(pickle_in)
+#         print(f"Loaded {len(data)} items from {label}")
+#         if len(data) > 0:
+#             print(f"First item in {label}: {data[0]}")
+#         return data
 
-un_sentences = load_and_print_pickle(sentence_path, "Sentences")
-fileid = load_and_print_pickle(fileid_path, "File IDs")
-tags = load_and_print_pickle(tags_path, "Tags")
+def load_pickle(file_path):
+    with open(file_path, "rb") as f:
+        return pickle.load(f)
+
+
+# load data
+un_sentences = load_pickle(sentence_path)
+fileid = load_pickle(fileid_path)
+tags = load_pickle(tags_path)
 
 num_rows = len(un_sentences)
 print(f"Number of rows: {num_rows}")
 
-# continue if loaded properly
-if num_rows > 0:
-    def preprocess():
-        splitted = []
-        for i in range(num_rows):
-            divided = un_sentences[i]
-            divided = re.sub(r'\\n', '', divided).strip()
-            divided = re.sub(r'[\\]', '', divided)
-            divided = re.sub(r'[(),:.";?><]', '', divided)
-            divided = re.sub(r'[0-9]*', '', divided).strip()
-            divided = re.sub(r" [?\([^)]-+\)]", '', divided)
-            splitted.append(divided)
-        print(f"Preprocessed {len(splitted)} sentences")
-        return splitted
 
-    splitted = preprocess()
 
-    def normal_preprocess():
-        norm = []
-        for i in range(num_rows):
-            divided = un_sentences[i]
-            divided = re.sub(r'\\n', '', divided).strip()
-            divided = re.sub(r'[\\]', '', divided)
-            norm.append(divided)
-        print(f"Normal preprocessed {len(norm)} sentences")
-        return norm
+def preprocess():
+    splitted = []
+    for i in range(num_rows):
+        divided = un_sentences[i]
+        divided = re.sub(r'\\n', '', divided).strip()
+        divided = re.sub(r'[\\]', '', divided)
+        divided = re.sub(r'[(),:.";?><]', '', divided)
+        divided = re.sub(r'[0-9]*', '', divided).strip()
+        divided = re.sub(r" [?\([^)]-+\)]", '', divided)
+        splitted.append(divided)
+    print(f"Preprocessed {len(splitted)} sentences")
+    return splitted
 
-    def listToString(s):
-        str1 = " "
-        return str1.join(s)
+def normal_preprocess():
+    norm = []
+    for i in range(num_rows):
+        divided = un_sentences[i]
+        divided = re.sub(r'\\n', '', divided).strip()
+        divided = re.sub(r'[\\]', '', divided)
+        norm.append(divided)
+    print(f"Normal preprocessed {len(norm)} sentences")
+    return norm
 
-    def nltk2wn_tag(nltk_tag):
-        if nltk_tag.startswith('J'):
-            return wordnet.ADJ
-        elif nltk_tag.startswith('V'):
-            return wordnet.VERB
-        elif nltk_tag.startswith('N'):
-            return wordnet.NOUN
-        elif nltk_tag.startswith('R'):
-            return wordnet.ADV
+def listToString(s):
+    str1 = " "
+    return str1.join(s)
+
+def nltk2wn_tag(nltk_tag):
+    if nltk_tag.startswith('J'):
+        return wordnet.ADJ
+    elif nltk_tag.startswith('V'):
+        return wordnet.VERB
+    elif nltk_tag.startswith('N'):
+        return wordnet.NOUN
+    elif nltk_tag.startswith('R'):
+        return wordnet.ADV
+    else:
+        return None
+
+def lemmatize_sentence(sentence):
+    nltk_tagged = nltk.pos_tag(nltk.word_tokenize(sentence))
+    wn_tagged = map(lambda x: (x[0], nltk2wn_tag(x[1])), nltk_tagged)
+    res_words = []
+    for word, tag in wn_tagged:
+        if tag is None:
+            res_words.append(word)
         else:
-            return None
+            res_words.append(lemmatizer.lemmatize(word, tag))
+    return " ".join(res_words)
 
-    def lemmatize_sentence(sentence):
-        nltk_tagged = nltk.pos_tag(nltk.word_tokenize(sentence))
-        wn_tagged = map(lambda x: (x[0], nltk2wn_tag(x[1])), nltk_tagged)
-        res_words = []
-        for word, tag in wn_tagged:
-            if tag is None:
-                res_words.append(word)
+# i=0 for normal text and i=1 for processed text
+def create_sentence_list(i):
+    if i == 1:
+        processed_sentences = preprocess()
+    else:
+        processed_sentences = normal_preprocess()
+    sentence_list = []
+    for row in range(num_rows):
+        sentence_list.append(lemmatize_sentence(porter.stem(processed_sentences[row].lower())))
+    print(f"Created sentence list with {len(sentence_list)} sentences")
+    return sentence_list
+
+def normal_tag(word):
+    sep = []
+    ws = word.split(',')
+    for w in ws:
+        tar = (w.split('-'))[0]
+        sep.append(tar.upper())
+    return sep
+
+# use create_label(0) to access tag-1, and so on 
+def create_label(i):
+    label = []
+    for row in range(num_rows):
+        label.append(normal_tag(tags[row][i]))
+    return label
+
+def create_tag_vs_sen(j):
+    labels = create_label(j)
+    label_dic = {}
+    for i in range(num_rows):
+        for label in labels[i]:
+            if label in label_dic.keys():
+                label_dic[label].append(i)
             else:
-                res_words.append(lemmatizer.lemmatize(word, tag))
-        return " ".join(res_words)
+                label_dic[label] = [i]
+    return label_dic
 
-    # i=0 for normal text and i=1 for processed text
-    def create_sentence_list(i):
-        if i == 1:
-            processed_sentences = preprocess()
-        else:
-            processed_sentences = normal_preprocess()
-        sentence_list = []
-        for row in range(num_rows):
-            sentence_list.append(lemmatize_sentence(porter.stem(processed_sentences[row].lower())))
-        print(f"Created sentence list with {len(sentence_list)} sentences")
-        return sentence_list
+def collect_tags(i):
+    return separate_tags(i)
 
-    def normal_tag(word):
-        sep = []
-        ws = word.split(',')
-        for w in ws:
-            tar = (w.split('-'))[0]
-            sep.append(tar.upper())
-        return sep
+def create_tag_list():
+    tag_list = []
+    for i in range(num_rows):
+        collect_tags(i)
+    return tag_list
 
-    # use create_label(0) to access tag-1, and so on 
-    def create_label(i):
-        label = []
-        for row in range(num_rows):
-            label.append(normal_tag(tags[row][i]))
-        return label
+# returns stopword removed sentences in list [['authors', 'argue'], ['paper', 'due']]
+def stop_word_removed_sen():
+    li = create_sentence_list(1)
+    removed = []
+    for l in li:
+        wordsList = nltk.word_tokenize(l.lower())
+        wordsList_new = [w for w in wordsList if not w in stop_words and len(w) > 2]
+        removed.append(wordsList_new)
+    return removed
 
-    def create_tag_vs_sen(j):
-        labels = create_label(j)
-        label_dic = {}
-        for i in range(num_rows):
-            for label in labels[i]:
-                if label in label_dic.keys():
-                    label_dic[label].append(i)
-                else:
-                    label_dic[label] = [i]
-        return label_dic
+def word_sen():
+    li = create_sentence_list(1)
+    removed = []
+    for l in li:
+        wordsList = nltk.word_tokenize(l)
+        wordsList_new = [word for word in wordsList if len(word) > 2]
+        removed.append(wordsList_new)
+    return removed
 
-    def collect_tags(i):
-        return separate_tags(i)
+# i=0 for normal i=1 for tokenized list of words of a sentences
+def word_list(i):
+    wor_list = []
+    if i == 0:
+        lis = word_sen()
+    else:
+        lis = stop_word_removed_sen()
+    for l in lis:
+        for w in l:
+            if w not in wor_list:
+                wor_list.append(w)
+    return wor_list
 
-    def create_tag_list():
-        tag_list = []
-        for i in range(num_rows):
-            collect_tags(i)
-        return tag_list
+wpt = nltk.WordPunctTokenizer()
+stop_words = nltk.corpus.stopwords.words('english')
 
-    # returns stopword removed sentences in list [['authors', 'argue'], ['paper', 'due']]
-    def stop_word_removed_sen():
-        li = create_sentence_list(1)
-        removed = []
-        for l in li:
-            wordsList = nltk.word_tokenize(l.lower())
-            wordsList_new = [w for w in wordsList if not w in stop_words and len(w) > 2]
-            removed.append(wordsList_new)
-        return removed
+def normalize_document(doc):
+    doc = re.sub(r'[^a-zA-Z\s]', '', doc, re.I | re.A)
+    doc = doc.lower()
+    doc = doc.strip()
+    tokens = wpt.tokenize(doc)
+    filtered_tokens = [token for token in tokens if (token not in stop_words and len(token) > 3)]
+    doc = ' '.join(filtered_tokens)
+    return doc
 
-    def word_sen():
-        li = create_sentence_list(1)
-        removed = []
-        for l in li:
-            wordsList = nltk.word_tokenize(l)
-            wordsList_new = [word for word in wordsList if len(word) > 2]
-            removed.append(wordsList_new)
-        return removed
+# ensure corpus is not empty
+corpus = create_sentence_list(1)
+print(f"Corpus has {len(corpus)} sentences")
+if len(corpus) == 0:
+    raise ValueError("Corpus is empty. Please check the input data and preprocessing steps.")
 
-    # i=0 for normal i=1 for tokenized list of words of a sentences
-    def word_list(i):
-        wor_list = []
-        if i == 0:
-            lis = word_sen()
-        else:
-            lis = stop_word_removed_sen()
-        for l in lis:
-            for w in l:
-                if w not in wor_list:
-                    wor_list.append(w)
-        return wor_list
+# vectorize the normalization of the corpus
+normalize_corpus = np.vectorize(normalize_document, otypes=[str])
+norm_corpus = normalize_corpus(corpus)
 
-    wpt = nltk.WordPunctTokenizer()
-    stop_words = nltk.corpus.stopwords.words('english')
+# convert to dataframe 
+df = pd.DataFrame({
+    'sentence': corpus,
+    'normalized_sentence': norm_corpus,
+    'file_id': fileid,
+    'tags': tags
+})
 
-    def normalize_document(doc):
-        doc = re.sub(r'[^a-zA-Z\s]', '', doc, re.I | re.A)
-        doc = doc.lower()
-        doc = doc.strip()
-        tokens = wpt.tokenize(doc)
-        filtered_tokens = [token for token in tokens if (token not in stop_words and len(token) > 3)]
-        doc = ' '.join(filtered_tokens)
-        return doc
-
-    # ensure corpus is not empty
-    corpus = create_sentence_list(1)
-    print(f"Corpus has {len(corpus)} sentences")
-    if len(corpus) == 0:
-        raise ValueError("Corpus is empty. Please check the input data and preprocessing steps.")
-
-    # vectorize the normalization of the corpus
-    normalize_corpus = np.vectorize(normalize_document, otypes=[str])
-    norm_corpus = normalize_corpus(corpus)
+processed_data_path = '/Users/aimeeco/peer-review-ML-model/data/processed_data.csv'
+df.to_csv(processed_data_path, index=False)
+print(f"saved processed data to '{processed_data_path}'")
