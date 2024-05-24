@@ -30,23 +30,9 @@ print(f"Sentence Path: {sentence_path}")
 print(f"FileID Path: {fileid_path}")
 print(f"Tags Path: {tags_path}")
 
-# load data from pickle files and print their contents
-# def load_and_print_pickle(file_path, label):
-#     if not os.path.exists(file_path):
-#         print(f"{label} file does not exist: {file_path}")
-#         return []
-    
-#     with open(file_path, "rb") as pickle_in:
-#         data = pickle.load(pickle_in)
-#         print(f"Loaded {len(data)} items from {label}")
-#         if len(data) > 0:
-#             print(f"First item in {label}: {data[0]}")
-#         return data
-
 def load_pickle(file_path):
     with open(file_path, "rb") as f:
         return pickle.load(f)
-
 
 # load data
 un_sentences = load_pickle(sentence_path)
@@ -207,14 +193,23 @@ if len(corpus) == 0:
 normalize_corpus = np.vectorize(normalize_document, otypes=[str])
 norm_corpus = normalize_corpus(corpus)
 
-# convert to dataframe 
+# make sure all elements in tags are strings before using eval
+tags = [str(tag) for tag in tags]
+
+# convert the tags to separate columns
+section_labels, aspect_labels, purpose_labels, significance_labels = zip(*[eval(tag) for tag in tags])
+
 df = pd.DataFrame({
-    'sentence': corpus,
+    'sentence': un_sentences,
     'normalized_sentence': norm_corpus,
     'file_id': fileid,
-    'tags': tags
+    'section_label': section_labels,
+    'aspect_label': aspect_labels,
+    'purpose_label': purpose_labels,
+    'significance_label': significance_labels
 })
 
 processed_data_path = '/Users/aimeeco/peer-review-ML-model/data/processed_data.csv'
 df.to_csv(processed_data_path, index=False)
-print(f"saved processed data to '{processed_data_path}'")
+
+print(f"processed data saved to '{processed_data_path}'.")
