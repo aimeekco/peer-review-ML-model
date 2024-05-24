@@ -56,8 +56,6 @@ tags = load_pickle(tags_path)
 num_rows = len(un_sentences)
 print(f"Number of rows: {num_rows}")
 
-
-
 def preprocess():
     splitted = []
     for i in range(num_rows):

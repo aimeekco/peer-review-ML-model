@@ -1,5 +1,5 @@
 import openai 
-from transformers import BertTokenizer, BertForSentenceClassification
+from transformers import BertTokenizer, BertForSequenceClassification
 
 openai.api_key = "api key"
 
@@ -39,11 +39,12 @@ rubric_categories = [
 ]
 
 bert_scores = get_scores(paper_text)
+details = ["Methodology", "Results", "Experiments", "Analysis"]
 
 # generate suggestions based on BERT scores
 suggestions_dict = {}
 for category, score in zip(rubric_categories, bert_scores):
-    suggestions = generate_suggestions(paper_text, category, score)
+    suggestions = generate_suggestions(paper_text, category, score, details)
     suggestions_dict[category] = suggestions
     
 final_output = {
