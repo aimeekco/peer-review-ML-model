@@ -5,13 +5,14 @@ from sklearn.preprocessing import MultiLabelBinarizer
 import torch
 import numpy as np
 
-df = pd.read_csv('/Users/aimeeco/peer-review-ML-model/data/processed_data.csv')
+# Read the data
+processed_data_path = "/Users/aimeeco/peer-review-ML-model/data/processed_data.csv"
+df = pd.read_csv(processed_data_path)
 
 texts = df['normalized_sentence'].tolist()
 print(f"Number of texts before filtering: {len(texts)}")
 
 texts = [text for text in texts if isinstance(text, str)]
-
 print(f"Number of texts after filtering: {len(texts)}")
 print(f"Sample texts: {texts[:5]}")
 
@@ -111,3 +112,4 @@ trainer.train()
 # Save the model and tokenizer
 model.save_pretrained('./results')
 tokenizer.save_pretrained('./results')
+

@@ -4,6 +4,7 @@ from sklearn.preprocessing import MultiLabelBinarizer
 import torch
 from torch.utils.data import DataLoader
 import numpy as np
+import matplotlib.pyplot as plt
 
 # Check device availability
 device = torch.device('cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu')
@@ -23,7 +24,7 @@ print(f"Number of texts: {len(test_texts)}")
 print(f"Sample texts: {test_texts[:5]}")
 
 # Filter the original DataFrame to match the filtered texts
-test_df_filtered = test_df[test_df['normalized_sentence'].apply(lambda x: isinstance(x, str))]
+test_df_filtered = test_df[test_df['normalized_sentence'].apply(lambda x: isinstance(x, str))].copy()
 
 # Convert labels to lists and ensure they are strings
 def convert_labels_to_list(label):
@@ -32,10 +33,10 @@ def convert_labels_to_list(label):
     label_string = str(label).strip("[]").replace("'", "")
     return [lbl.strip() for lbl in label_string.split(',')]
 
-test_df_filtered['section_label'] = test_df_filtered['section_label'].apply(convert_labels_to_list)
-test_df_filtered['aspect_label'] = test_df_filtered['aspect_label'].apply(convert_labels_to_list)
-test_df_filtered['purpose_label'] = test_df_filtered['purpose_label'].apply(convert_labels_to_list)
-test_df_filtered['significance_label'] = test_df_filtered['significance_label'].apply(convert_labels_to_list)
+test_df_filtered.loc[:, 'section_label'] = test_df_filtered['section_label'].apply(convert_labels_to_list)
+test_df_filtered.loc[:, 'aspect_label'] = test_df_filtered['aspect_label'].apply(convert_labels_to_list)
+test_df_filtered.loc[:, 'purpose_label'] = test_df_filtered['purpose_label'].apply(convert_labels_to_list)
+test_df_filtered.loc[:, 'significance_label'] = test_df_filtered['significance_label'].apply(convert_labels_to_list)
 
 # Combine labels into a single list
 test_labels = test_df_filtered[['section_label', 'aspect_label', 'purpose_label', 'significance_label']].apply(lambda row: row.iloc[0] + row.iloc[1] + row.iloc[2] + row.iloc[3], axis=1).tolist()
@@ -68,13 +69,14 @@ class TestDataset(torch.utils.data.Dataset):
 test_dataset = TestDataset(test_encodings, encoded_test_labels)
 
 # Load the trained model from the checkpoint
-model = BertForSequenceClassification.from_pretrained('./results')
+model = BertForSequenceClassification.from_pretrained('./results/checkpoint-10360')
 model.to(device)
 
 # Predict
 model.eval()
 predicted_probs = []
 true_labels = []
+raw_logits = []
 
 with torch.no_grad():
     for batch in DataLoader(test_dataset, batch_size=8):
@@ -82,13 +84,21 @@ with torch.no_grad():
         labels = batch['labels'].to(device)
         outputs = model(**inputs)
         logits = outputs.logits
+        raw_logits.extend(logits.cpu().numpy())  # Collect raw logits
         probs = torch.sigmoid(logits).cpu().numpy()
         predicted_probs.extend(probs)
         true_labels.extend(labels.cpu().numpy())
 
+# Convert predicted_probs to a NumPy array
+predicted_probs = np.array(predicted_probs)
+
+# Print raw logits for inspection
+print("Sample raw logits:")
+print(raw_logits[:5])
+
 # Experiment with different thresholds
-threshold = 0.3  # Adjust this value and observe the results
-predicted_labels = (np.array(predicted_probs) > threshold).astype(int)
+threshold = 0.1
+predicted_labels = (predicted_probs > threshold).astype(int)
 
 # Convert predicted labels back to original label format
 predicted_labels = mlb.inverse_transform(predicted_labels)
@@ -96,8 +106,8 @@ predicted_labels = mlb.inverse_transform(predicted_labels)
 # Calculate evaluation metrics
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score
 
-precision, recall, f1, _ = precision_recall_fscore_support(encoded_test_labels, (np.array(predicted_probs) > threshold).astype(int), average='micro')
-accuracy = accuracy_score(encoded_test_labels, (np.array(predicted_probs) > threshold).astype(int))
+precision, recall, f1, _ = precision_recall_fscore_support(encoded_test_labels, (predicted_probs > threshold).astype(int), average='micro')
+accuracy = accuracy_score(encoded_test_labels, (predicted_probs > threshold).astype(int))
 
 print(f"Precision: {precision}")
 print(f"Recall: {recall}")
