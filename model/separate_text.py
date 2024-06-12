@@ -30,5 +30,5 @@ text= extract_text_from_pdf(pdf_path)
 section_texts = separate_sections(text)
 
 for section, content in section_texts.items():
-    print(f"Section: {section}\nContent: {content[:500]}\n")
+    print(f"Section: {section}\nContent: {content}\n")
     print("="*80)
