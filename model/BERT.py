@@ -5,7 +5,7 @@ from sklearn.preprocessing import MultiLabelBinarizer
 import torch
 import numpy as np
 
-# Read the data
+# read data
 processed_data_path = "/Users/aimeeco/peer-review-ML-model/data/processed_data.csv"
 df = pd.read_csv(processed_data_path)
 
@@ -16,10 +16,10 @@ texts = [text for text in texts if isinstance(text, str)]
 print(f"Number of texts after filtering: {len(texts)}")
 print(f"Sample texts: {texts[:5]}")
 
-# Filter the original df to match the filtered texts
+# filter the original df to match the filtered texts
 df_filtered = df[df['normalized_sentence'].apply(lambda x: isinstance(x, str))]
 
-# Convert labels to strings and then to lists
+# convert labels to strings and then to lists
 def convert_labels_to_list(label):
     if isinstance(label, float):
         return []
@@ -33,17 +33,17 @@ df_filtered['significance_label'] = df_filtered['significance_label'].apply(conv
 
 labels = df_filtered[['section_label', 'aspect_label', 'purpose_label', 'significance_label']].apply(lambda row: row[0] + row[1] + row[2] + row[3], axis=1).tolist()
 
-# Use MultiLabelBinarizer to convert labels to multi-hot encoded format
+# convert labels to multi-hot encoded format
 mlb = MultiLabelBinarizer()
 encoded_labels = mlb.fit_transform(labels)
 
 assert len(texts) == len(encoded_labels), f"The number of texts ({len(texts)}) and labels ({len(encoded_labels)}) should match"
 
-# Tokenize data
+# tokenize data
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 encodings = tokenizer(texts, truncation=True, padding=True, max_length=512)
 
-# Check device availability
+# check device availability
 device = torch.device('cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu')
 print(f"Using device: {device}")
 
@@ -63,18 +63,18 @@ class PaperDataset(torch.utils.data.Dataset):
 dataset = PaperDataset(encodings, encoded_labels)
 train_dataset, val_dataset = train_test_split(dataset, test_size=0.2)
 
-# Load model
+# model
 model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=len(mlb.classes_))
 model.to(device)
 
-# Calculate class weights manually
+# calculate class weights manually
 label_counts = np.sum(encoded_labels, axis=0)
 class_weights = len(encoded_labels) / (len(mlb.classes_) * label_counts)
 class_weights = torch.tensor(class_weights, dtype=torch.float).to(device)
 
 print(f"Class Weights: {class_weights}")
 
-# Define loss function with class weights and custom trainer
+# loss function with class weights and custom trainer
 from torch.nn import BCEWithLogitsLoss
 
 class CustomTrainer(Trainer):
@@ -109,7 +109,6 @@ trainer = CustomTrainer(
 
 trainer.train()
 
-# Save the model and tokenizer
 model.save_pretrained('./results')
 tokenizer.save_pretrained('./results')
 

@@ -23,7 +23,7 @@ def generate_comment(section, paper_details):
 
     return response.choices[0].message.content.strip()
 
-# Example usage
+# example usage after running separate_text.py
 paper_details = {
     "title": "Addendum 2020 to Measurement of the Earth's rotation: 720 BC to AD 2015",
     "authors": "L. V. Morrison, F. R. Stephenson, C. Y. Hohenkerk, M. Zawilski"
